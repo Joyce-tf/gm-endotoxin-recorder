@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0,user-scalable=no">
+    <title>GM&内毒素数据记录工具</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft Yahei", sans-serif;
+        }
+        body {
+            background-color: #f5f7fa;
+            padding: 15px 0;
+        }
+        .container {
+            width: 95%;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        .page {
+            background-color: #fff;
+            border-radius: 8px;
+            padding: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            margin-bottom: 12px;
+        }
+        .page.hide {
+            display: none;
+        }
+        h2 {
+            color: #2d3748;
+            margin-bottom: 12px;
+            font-weight: 600;
+            border-left: 3px solid #4299e1;
+            padding-left: 8px;
+            font-size: 16px;
+        }
+        /* 表格滚动容器，优化手机滑动体验 */
+        .table-wrap {
+            width: 100%;
+            overflow-x: auto;
+            border-radius: 8px;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: thin;
+        }
+        .table-wrap::-webkit-scrollbar {
+            height: 4px;
+        }
+        .table-wrap::-webkit-scrollbar-thumb {
+            background-color: #c9d3e0;
+            border-radius: 2px;
+        }
+        table {
+            width: 100%;
+            min-width: 380px;
+            border-collapse: separate;
+            border-spacing: 0;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 16px;
+        }
+        th, td {
+            border: 1px solid #e2e8f0;
+            padding: 4px 6px;
+            text-align: center;
+            font-size: 12px;
+        }
+        th {
+            background-color: #ebf4ff;
+            color: #2b6cb0;
+            font-weight: 500;
+        }
+        /* 调整列宽，增加操作列 */
+        th:nth-child(1),
+        td:nth-child(1) {
+            width: 10%;
+            min-width: 40px;
+        }
+        th:nth-child(2),
+        td:nth-child(2) {
+            width: 18%;
+            min-width: 60px;
+        }
+        th:nth-child(3),
+        td:nth-child(3) {
+            width: 12%;
+            min-width: 50px;
+        }
+        th:nth-child(4),
+        td:nth-child(4) {
+            width: 17%;
+            min-width: 60px;
+        }
+        th:nth-child(5),
+        td:nth-child(5) {
+            width: 17%;
+            min-width: 60px;
+        }
+        th:nth-child(6),
+        td:nth-child(6) {
+            width: 17%;
+            min-width: 60px;
+        }
+        th:nth-child(7),
+        td:nth-child(7) {
+            width: 9%;
+            min-width: 50px;
+        }
+
+        .fixed-title {
+            background-color: #f8fafc;
+            color: #4a5568;
+            pointer-events: none;
+            font-weight: 500;
+        }
+        .fixed-date {
+            background-color: #f0f9ff;
+            color: #2b6cb0;
+            pointer-events: none;
+        }
+        .editable {
+            background-color: #fff;
+            transition: background-color 0.2s;
+            text-align: right;
+            padding-right: 8px;
+        }
+        .editable:focus {
+            outline: none;
+            background-color: #f0f9ff;
+            border-color: #7dd3fc;
+        }
+        .btn-group {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .btn {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn.primary {
+            background-color: #4299e1;
+            color: #fff;
+        }
+        .btn.primary:hover {
+            background-color: #3182ce;
+        }
+        .btn.secondary {
+            background-color: #e2e8f0;
+            color: #4a5568;
+        }
+        .btn.secondary:hover {
+            background-color: #cbd5e1;
+        }
+        /* 操作按钮样式，适配手机 */
+        .opt-btn {
+            padding: 2px 4px;
+            border: none;
+            border-radius: 2px;
+            font-size: 11px;
+            cursor: pointer;
+            margin: 0 2px;
+        }
+        .opt-btn.delete {
+            background-color: #f56565;
+            color: #fff;
+        }
+        .opt-btn.save {
+            background-color: #48bb78;
+            color: #fff;
+        }
+        .filter-wrap {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+            justify-content: space-between;
+        }
+        .filter-left {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        /* 日历选择框样式，适配手机 */
+        #dateFilter, .daily-date-input {
+            padding: 4px 8px;
+            border: 1px solid #e2e8f0;
+            border-radius: 4px;
+            font-size: 12px;
+            min-width: 120px;
+        }
+        .empty-tip {
+            text-align: center;
+            color: #94a3b8;
+            padding: 20px 0;
+            font-size: 13px;
+        }
+        .stats-wrap {
+            background-color: #f8fafc;
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 12px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: space-around;
+        }
+        .stats-item {
+            text-align: center;
+        }
+        .stats-label {
+            display: block;
+            color: #4a5568;
+            font-size: 12px;
+            margin-bottom: 2px;
+        }
+        .stats-value {
+            display: block;
+            color: #2b6cb0;
+            font-size: 16px;
+            font-weight: 600;
+        }
+        /* 新增的批量操作提示 */
+        .batch-tip {
+            font-size: 11px;
+            color: #718096;
+            margin-top: -8px;
+            margin-bottom: 8px;
+            text-align: right;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 第一页：每日填写页 -->
+        <div class="page" id="page1">
+            <h2>每日数据记录</h2>
+            <div class="table-wrap">
+                <table id="dailyTable">
+                    <thead>
+                        <tr>
+                            <th class="fixed-title">项目</th>
+                            <th>日期</th>
+                            <th>星期</th>
+                            <th>标本量</th>
+                            <th>试剂使用量</th>
+                            <th>复查量</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="fixed-title">GM</td>
+                            <td><input type="date" class="daily-date-input fixed-date" id="gmDate"></td>
+                            <td class="fixed-date" id="gmWeek"></td>
+                            <td contenteditable="true" class="editable" placeholder="0"></td>
+                            <td contenteditable="true" class="editable" placeholder="0"></td>
+                            <td contenteditable="true" class="editable" placeholder="0"></td>
+                        </tr>
+                        <tr>
+                            <td class="fixed-title">内毒素</td>
+                            <td class="fixed-date" id="endotoxinDate">同步GM日期</td>
+                            <td class="fixed-date" id="endotoxinWeek"></td>
+                            <td contenteditable="true" class="editable" placeholder="0"></td>
+                            <td contenteditable="true" class="editable" placeholder="0"></td>
+                            <td contenteditable="true" class="editable" placeholder="0"></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="btn-group">
+                <button class="btn primary" onclick="saveData()">保存</button>
+                <button class="btn secondary" onclick="goToPage2()">看汇总</button>
+            </div>
+        </div>
+
+        <!-- 第二页：数据汇总页 -->
+        <div class="page hide" id="page2">
+            <h2>数据汇总</h2>
+            <div class="filter-wrap">
+                <div class="filter-left">
+                    <span>选日期：</span>
+                    <input type="date" id="dateFilter" onchange="filterData()" placeholder="选择日期">
+                </div>
+                <div>
+                    <button class="btn secondary" onclick="batchModifyData()">修改</button>
+                    <button class="btn secondary" onclick="addHistoryData()">补录数据</button>
+                </div>
+            </div>
+            <div class="batch-tip">点击修改后可批量编辑当前页面的所有数据</div>
+            <!-- 统计数据 -->
+            <div class="stats-wrap" id="statsWrap">
+                <div class="stats-item">
+                    <span class="stats-label">GM标本总量</span>
+                    <span class="stats-value" id="gmSampleTotal">0</span>
+                </div>
+                <div class="stats-item">
+                    <span class="stats-label">内毒素标本总量</span>
+                    <span class="stats-value" id="endotoxinSampleTotal">0</span>
+                </div>
+                <div class="stats-item">
+                    <span class="stats-label">总试剂使用量</span>
+                    <span class="stats-value" id="reagentTotal">0</span>
+                </div>
+                <div class="stats-item">
+                    <span class="stats-label">记录天数</span>
+                    <span class="stats-value" id="recordDays">0</span>
+                </div>
+            </div>
+            <div class="table-wrap">
+                <table id="summaryTable">
+                    <thead>
+                        <tr>
+                            <th>项目</th>
+                            <th>日期</th>
+                            <th>星期</th>
+                            <th>标本量</th>
+                            <th>试剂使用量</th>
+                            <th>复查量</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="summaryBody">
+                        <tr>
+                            <td colspan="7" class="empty-tip">暂无数据，先去填写</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="btn-group">
+                <button class="btn secondary" onclick="goToPage1()">返回填写</button>
+                <button class="btn secondary" onclick="exportData()">导出数据</button>
+            </div>
+        </div>
+
+        <!-- 补录数据弹窗 -->
+        <div class="page hide" id="addPage">
+            <h2>补录历史数据</h2>
+            <div class="table-wrap">
+                <table id="addTable">
+                    <thead>
+                        <tr>
+                            <th class="fixed-title">项目</th>
+                            <th>日期</th>
+                            <th>星期</th>
+                            <th>标本量</th>
+                            <th>试剂使用量</th>
+                            <th>复查量</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="fixed-title">GM</td>
+                            <td><input type="date" class="add-date" id="addGmDate"></td>
+                            <td class="fixed-date" id="addGmWeek"></td>
+                            <td contenteditable="true" class="editable" placeholder="0"></td>
+                            <td contenteditable="true" class="editable" placeholder="0"></td>
+                            <td contenteditable="true" class="editable" placeholder="0"></td>
+                        </tr>
+                        <tr>
+                            <td class="fixed-title">内毒素</td>
+                            <td><input type="date" class="add-date" id="addEndotoxinDate"></td>
+                            <td class="fixed-date" id="addEndotoxinWeek"></td>
+                            <td contenteditable="true" class="editable" placeholder="0"></td>
+                            <td contenteditable="true" class="editable" placeholder="0"></td>
+                            <td contenteditable="true" class="editable" placeholder="0"></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="btn-group">
+                <button class="btn primary" onclick="saveAddData()">保存补录</button>
+                <button class="btn secondary" onclick="goToPage2()">返回汇总</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 页面加载时初始化
+        window.onload = function() {
+            fillCurrentDate();
+            loadSummaryData();
+            // 监听每日记录页的日期选择
+            document.getElementById("gmDate").addEventListener("change", function() {
+                updateDailyWeek(this);
+            });
+            // 监听补录日期选择
+            document.querySelectorAll(".add-date").forEach(input => {
+                input.addEventListener("change", function() {
+                    updateWeek(this);
+                });
+            });
+        }
+
+        // 自动填充当前星期和日期
+        function fillCurrentDate() {
+            const date = new Date();
+            const weekDays = ["日", "一", "二", "三", "四", "五", "六"];
+            // 月份和日期补0，统一格式
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            const fullDate = `${date.getFullYear()}-${month}-${day}`;
+            const weekDay = `周${weekDays[date.getDay()]}`;
+            
+            // 每日填写页：默认当前日期，日历选择框
+            document.getElementById("gmDate").value = fullDate;
+            document.getElementById("gmWeek").textContent = weekDay;
+            document.getElementById("endotoxinWeek").textContent = weekDay;
+            
+            // 补录页面：保留完整日期用于存储和筛选
+            document.getElementById("addGmDate").value = fullDate;
+            document.getElementById("addEndotoxinDate").value = fullDate;
+            document.getElementById("addGmWeek").textContent = weekDay;
+            document.getElementById("addEndotoxinWeek").textContent = weekDay;
+        }
+
+        // 每日记录页：根据选择的日期更新星期（同步GM和内毒素）
+        function updateDailyWeek(input) {
+            const dateStr = input.value;
+            if (!dateStr) return;
+            const date = new Date(dateStr);
+            const weekDays = ["日", "一", "二", "三", "四", "五", "六"];
+            const weekDay = `周${weekDays[date.getDay()]}`;
+            
+            // 更新星期显示
+            document.getElementById("gmWeek").textContent = weekDay;
+            document.getElementById("endotoxinWeek").textContent = weekDay;
+            // 显示选中的日期（方便查看）
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            document.getElementById("endotoxinDate").textContent = `${month}-${day}`;
+        }
+
+        // 补录页：根据选择的日期更新星期
+        function updateWeek(input) {
+            const dateStr = input.value;
+            if (!dateStr) return;
+            const date = new Date(dateStr);
+            const weekDays = ["日", "一", "二", "三", "四", "五", "六"];
+            const weekDay = `周${weekDays[date.getDay()]}`;
+            if (input.id === "addGmDate") {
+                document.getElementById("addGmWeek").textContent = weekDay;
+                document.getElementById("addEndotoxinDate").value = dateStr;
+                document.getElementById("addEndotoxinWeek").textContent = weekDay;
+            } else if (input.id === "addEndotoxinDate") {
+                document.getElementById("addEndotoxinWeek").textContent = weekDay;
+                document.getElementById("addGmDate").value = dateStr;
+                document.getElementById("addGmWeek").textContent = weekDay;
+            }
+        }
+
+        // 保存今日数据到localStorage（使用选中的日期）
+        function saveData() {
+            const table = document.getElementById("dailyTable");
+            const rows = table.querySelectorAll("tbody tr");
+            // 获取选中的日期（而非当前系统日期）
+            const selectedDate = document.getElementById("gmDate").value;
+            if (!selectedDate) {
+                alert("请选择记录的日期");
+                return;
+            }
+            const weekDay = document.getElementById("gmWeek").textContent;
+
+            const gmData = {
+                sample: rows[0].querySelectorAll("td.editable")[0].textContent.trim() || "0",
+                reagent: rows[0].querySelectorAll("td.editable")[1].textContent.trim() || "0",
+                review: rows[0].querySelectorAll("td.editable")[2].textContent.trim() || "0"
+            }
+            const endotoxinData = {
+                sample: rows[1].querySelectorAll("td.editable")[0].textContent.trim() || "0",
+                reagent: rows[1].querySelectorAll("td.editable")[1].textContent.trim() || "0",
+                review: rows[1].querySelectorAll("td.editable")[2].textContent.trim() || "0"
+            }
+
+            const data = {
+                date: selectedDate,
+                weekDay: weekDay,
+                gm: gmData,
+                endotoxin: endotoxinData
+            };
+
+            let savedData = JSON.parse(localStorage.getItem("dataRecords")) || [];
+            const existingIndex = savedData.findIndex(item => item.date === selectedDate);
+            if (existingIndex !== -1) {
+                savedData[existingIndex] = data;
+                alert("该日期已有数据，已覆盖更新");
+            } else {
+                savedData.push(data);
+                alert("保存成功");
+            }
+            localStorage.setItem("dataRecords", JSON.stringify(savedData));
+            // 清空输入框，保留日期选择
+            document.querySelectorAll('.editable').forEach(cell => {
+                cell.textContent = "0";
+            });
+        }
+
+        // 计算统计数据
+        function calculateStats(data) {
+            let gmSampleTotal = 0;
+            let endotoxinSampleTotal = 0;
+            let reagentTotal = 0;
+
+            data.forEach(item => {
+                gmSampleTotal += Number(item.gm.sample);
+                endotoxinSampleTotal += Number(item.endotoxin.sample);
+                reagentTotal += Number(item.gm.reagent) + Number(item.endotoxin.reagent);
+            });
+
+            document.getElementById("gmSampleTotal").textContent = gmSampleTotal;
+            document.getElementById("endotoxinSampleTotal").textContent = endotoxinSampleTotal;
+            document.getElementById("reagentTotal").textContent = reagentTotal;
+            document.getElementById("recordDays").textContent = data.length;
+        }
+
+        // 加载汇总数据
+        function loadSummaryData() {
+            const savedData = JSON.parse(localStorage.getItem("dataRecords")) || [];
+            const summaryBody = document.getElementById("summaryBody");
+            
+            summaryBody.innerHTML = "";
+
+            if (savedData.length === 0) {
+                summaryBody.innerHTML = '<tr><td colspan="7" class="empty-tip">暂无数据，先去填写</td></tr>';
+                document.getElementById("gmSampleTotal").textContent = "0";
+                document.getElementById("endotoxinSampleTotal").textContent = "0";
+                document.getElementById("reagentTotal").textContent = "0";
+                document.getElementById("recordDays").textContent = "0";
+                return;
+            }
+
+            calculateStats(savedData);
+
+            savedData.forEach(item => {
+                // GM行
+                const gmRow = document.createElement("tr");
+                gmRow.setAttribute("data-date", item.date);
+                gmRow.setAttribute("data-type", "gm");
+                gmRow.innerHTML = `
+                    <td>GM</td>
+                    <td>${item.date}</td>
+                    <td>${item.weekDay}</td>
+                    <td class="edit-cell">${item.gm.sample}</td>
+                    <td class="edit-cell">${item.gm.reagent}</td>
+                    <td class="edit-cell">${item.gm.review}</td>
+                    <td>
+                        <button class="opt-btn delete" onclick="deleteData('${item.date}')">删除</button>
+                    </td>
+                `;
+                summaryBody.appendChild(gmRow);
+
+                // 内毒素行
+                const endotoxinRow = document.createElement("tr");
+                endotoxinRow.setAttribute("data-date", item.date);
+                endotoxinRow.setAttribute("data-type", "endotoxin");
+                endotoxinRow.innerHTML = `
+                    <td>内毒素</td>
+                    <td>${item.date}</td>
+                    <td>${item.weekDay}</td>
+                    <td class="edit-cell">${item.endotoxin.sample}</td>
+                    <td class="edit-cell">${item.endotoxin.reagent}</td>
+                    <td class="edit-cell">${item.endotoxin.review}</td>
+                    <td>
+                        <button class="opt-btn delete" onclick="deleteData('${item.date}')">删除</button>
+                    </td>
+                `;
+                summaryBody.appendChild(endotoxinRow);
+            });
+        }
+
+        // 批量修改数据
+        function batchModifyData() {
+            const editCells = document.querySelectorAll(".edit-cell");
+            const topBtn = document.querySelector(".filter-wrap .btn.secondary:first-child");
+            const isEditing = topBtn.getAttribute("data-editing");
+
+            if (isEditing === "true") {
+                // 保存所有修改
+                let savedData = JSON.parse(localStorage.getItem("dataRecords")) || [];
+                document.querySelectorAll("#summaryBody tr").forEach(row => {
+                    const date = row.getAttribute("data-date");
+                    const type = row.getAttribute("data-type");
+                    const cells = row.querySelectorAll(".edit-cell");
+                    if (date && type && cells.length === 3) {
+                        const targetIndex = savedData.findIndex(item => item.date === date);
+                        if (targetIndex !== -1) {
+                            savedData[targetIndex][type] = {
+                                sample: cells[0].textContent.trim() || "0",
+                                reagent: cells[1].textContent.trim() || "0",
+                                review: cells[2].textContent.trim() || "0"
+                            }
+                        }
+                    }
+                })
+                localStorage.setItem("dataRecords", JSON.stringify(savedData));
+                alert("修改成功");
+
+                // 恢复状态
+                editCells.forEach(cell => {
+                    cell.contentEditable = false;
+                    cell.style.textAlign = "center";
+                });
+                topBtn.textContent = "修改";
+                topBtn.setAttribute("data-editing", "false");
+                loadSummaryData();
+            } else {
+                // 进入编辑状态
+                editCells.forEach(cell => {
+                    cell.contentEditable = true;
+                    cell.style.textAlign = "right";
+                });
+                topBtn.textContent = "保存";
+                topBtn.setAttribute("data-editing", "true");
+            }
+        }
+
+        // 删除数据
+        function deleteData(date) {
+            if (confirm("确定要删除该日期的所有数据吗？")) {
+                let savedData = JSON.parse(localStorage.getItem("dataRecords")) || [];
+                savedData = savedData.filter(item => item.date !== date);
+                localStorage.setItem("dataRecords", JSON.stringify(savedData));
+                loadSummaryData();
+            }
+        }
+
+        // 切换到汇总页
+        function goToPage2() {
+            document.getElementById("page1").classList.add("hide");
+            document.getElementById("addPage").classList.add("hide");
+            document.getElementById("page2").classList.remove("hide");
+            loadSummaryData();
+        }
+
+        // 切换到填写页
+        function goToPage1() {
+            document.getElementById("page2").classList.add("hide");
+            document.getElementById("addPage").classList.add("hide");
+            document.getElementById("page1").classList.remove("hide");
+            fillCurrentDate(); // 返回时重新默认当天日期
+        }
+
+        // 切换到补录页
+        function addHistoryData() {
+            document.getElementById("page2").classList.add("hide");
+            document.getElementById("page1").classList.add("hide");
+            document.getElementById("addPage").classList.remove("hide");
+        }
+
+        // 保存补录数据
+        function saveAddData() {
+            const table = document.getElementById("addTable");
+            const rows = table.querySelectorAll("tbody tr");
+            const dateStr = document.getElementById("addGmDate").value;
+            if (!dateStr) {
+                alert("请选择补录的日期");
+                return;
+            }
+            const date = new Date(dateStr);
+            const weekDays = ["日", "一", "二", "三", "四", "五", "六"];
+            const weekDay = `周${weekDays[date.getDay()]}`;
+
+            const gmData = {
+                sample: rows[0].querySelectorAll("td.editable")[0].textContent.trim() || "0",
+                reagent: rows[0].querySelectorAll("td.editable")[1].textContent.trim() || "0",
+                review: rows[0].querySelectorAll("td.editable")[2].textContent.trim() || "0"
+            }
+            const endotoxinData = {
+                sample: rows[1].querySelectorAll("td.editable")[0].textContent.trim() || "0",
+                reagent: rows[1].querySelectorAll("td.editable")[1].textContent.trim() || "0",
+                review: rows[1].querySelectorAll("td.editable")[2].textContent.trim() || "0"
+            }
+
+            const data = {
+                date: dateStr,
+                weekDay: weekDay,
+                gm: gmData,
+                endotoxin: endotoxinData
+            };
+
+            let savedData = JSON.parse(localStorage.getItem("dataRecords")) || [];
+            const existingIndex = savedData.findIndex(item => item.date === dateStr);
+            if (existingIndex !== -1) {
+                savedData[existingIndex] = data;
+                alert("该日期已有数据，已覆盖更新");
+            } else {
+                savedData.push(data);
+                alert("补录成功");
+            }
+            localStorage.setItem("dataRecords", JSON.stringify(savedData));
+            // 清空补录表单
+            document.querySelectorAll("#addTable .editable").forEach(cell => {
+                cell.textContent = "0";
+            });
+            goToPage2();
+        }
+
+        // 导出数据
+        function exportData() {
+            const savedData = JSON.parse(localStorage.getItem("dataRecords")) || [];
+            if (savedData.length === 0) {
+                alert("暂无数据可以导出");
+                return;
+            }
+            // 转换为CSV格式
+            let csvContent = "项目,日期,星期,标本量,试剂使用量,复查量\n";
+            savedData.forEach(item => {
+                csvContent += `GM,${item.date},${item.weekDay},${item.gm.sample},${item.gm.reagent},${item.gm.review}\n`;
+                csvContent += `内毒素,${item.date},${item.weekDay},${item.endotoxin.sample},${item.endotoxin.reagent},${item.endotoxin.review}\n`;
+            });
+            // 创建下载链接
+            const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.setAttribute("href", url);
+            link.setAttribute("download", `GM&内毒素数据_${new Date().toLocaleDateString()}.csv`);
+            link.style.visibility = "hidden";
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // 日历筛选数据
+        function filterData() {
+            const selectedDate = document.getElementById("dateFilter").value;
+            const savedData = JSON.parse(localStorage.getItem("dataRecords")) || [];
+            const summaryBody = document.getElementById("summaryBody");
+            
+            summaryBody.innerHTML = "";
+
+            // 处理筛选逻辑：没选日期显示全部，选了日期显示对应数据
+            const filteredData = selectedDate 
+                ? savedData.filter(item => item.date === selectedDate)
+                : savedData;
+
+            if (filteredData.length === 0) {
+                summaryBody.innerHTML = '<tr><td colspan="7" class="empty-tip">暂无该日期数据</td></tr>';
+                document.getElementById("gmSampleTotal").textContent = "0";
+                document.getElementById("endotoxinSampleTotal").textContent = "0";
+                document.getElementById("reagentTotal").textContent = "0";
+                document.getElementById("recordDays").textContent = "0";
+                return;
+            }
+
+            calculateStats(filteredData);
+
+            filteredData.forEach(item => {
+                const gmRow = document.createElement("tr");
+                gmRow.setAttribute("data-date", item.date);
+                gmRow.setAttribute("data-type", "gm");
+                gmRow.innerHTML = `
+                    <td>GM</td>
+                    <td>${item.date}</td>
+                    <td>${item.weekDay}</td>
+                    <td class="edit-cell">${item.gm.sample}</td>
+                    <td class="edit-cell">${item.gm.reagent}</td>
+                    <td class="edit-cell">${item.gm.review}</td>
+                    <td>
+                        <button class="opt-btn delete" onclick="deleteData('${item.date}')">删除</button>
+                    </td>
+                `;
+                summaryBody.appendChild(gmRow);
+
+                const endotoxinRow = document.createElement("tr");
+                endotoxinRow.setAttribute("data-date", item.date);
+                endotoxinRow.setAttribute("data-type", "endotoxin");
+                endotoxinRow.innerHTML = `
+                    <td>内毒素</td>
+                    <td>${item.date}</td>
+                    <td>${item.weekDay}</td>
+                    <td class="edit-cell">${item.endotoxin.sample}</td>
+                    <td class="edit-cell">${item.endotoxin.reagent}</td>
+                    <td class="edit-cell">${item.endotoxin.review}</td>
+                    <td>
+                        <button class="opt-btn delete" onclick="deleteData('${item.date}')">删除</button>
+                    </td>
+                `;
+                summaryBody.appendChild(endotoxinRow);
+            });
+        }
+    </script>
+</body>
+</html>
